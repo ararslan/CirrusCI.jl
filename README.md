@@ -26,10 +26,10 @@ task:
   install_script:
     - sh -c "$(fetch https://raw.githubusercontent.com/ararslan/CirrusCI.jl/master/bin/install.sh -o -)"
   build_script:
-    - julia --color=yes "using Pkg; Pkg.add(PackageSpec(name=\"YourPackage\", path=pwd()))"
-    - julia --color=yes "using Pkg; Pkg.build(\"YourPackage\")"
+    - julia --color=yes -e "using Pkg; Pkg.add(PackageSpec(name=\"YourPackage\", path=pwd()))"
+    - julia --color=yes -e "using Pkg; Pkg.build(\"YourPackage\")"
   test_script:
-    - julia --color=yes "using Pkg; Pkg.test(\"YourPackage\")"
+    - julia --color=yes -e "using Pkg; Pkg.test(\"YourPackage\")"
 ```
 
 ## Still to do

@@ -96,4 +96,4 @@ fi
 
 ln -fs "${HOME}/julia/bin/julia" /usr/local/bin/julia
 
-julia --color=yes "using InteractiveUtils; versioninfo()"
+julia --color=yes -e "using InteractiveUtils; versioninfo()"

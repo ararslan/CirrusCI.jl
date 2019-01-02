@@ -9,7 +9,7 @@ task:
   install_script:
     - sh -c "$(fetch https://raw.githubusercontent.com/ararslan/CirrusCI.jl/master/bin/install.sh -o -)"
   build_script:
-    - julia --color=yes "using Pkg; Pkg.add(PackageSpec(name=\"CirrusCI\", path=pwd()))"
-    - julia --color=yes "using Pkg; Pkg.build(\"CirrusCI\")"
+    - julia --color=yes -e "using Pkg; Pkg.add(PackageSpec(name=\"CirrusCI\", path=pwd()))"
+    - julia --color=yes -e "using Pkg; Pkg.build(\"CirrusCI\")"
   test_script:
-    - julia --color=yes "using Pkg; Pkg.test(\"CirrusCI\", coverage=true)"
+    - julia --color=yes -e "using Pkg; Pkg.test(\"CirrusCI\", coverage=true)"
