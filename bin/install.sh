@@ -1,6 +1,7 @@
 #!/bin/sh
 
 set -e
+set -x
 
 stop() {
     echo "$@" >&2
