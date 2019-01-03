@@ -93,8 +93,131 @@ else
     curl -s -L --retry 7 "${URL}" | tar -C "${HOME}/julia" -x -z --strip-components=1 -f -
 fi
 
-### Install and verify
+### Install and verify Julia
 
 ln -fs "${HOME}/julia/bin/julia" /usr/local/bin/julia
 
 julia --color=yes -e "using InteractiveUtils; versioninfo()"
+
+### Install utilities
+
+# Throw out trailing .jl, assume the name is otherwise a valid Julia package name
+JLPKG="$(echo "${CIRRUS_REPO_NAME}" | cut -d'.' -f 1)"
+
+cat > /usr/local/bin/cirrusjl <<EOF
+#!/bin/sh
+
+set -e
+
+hasproj() {
+    [ -f "Project.toml" ] || [ -f "JuliaProject.toml" ]
+}
+
+export JULIA_PROJECT="@."
+
+cd "${CIRRUS_WORKING_DIR}"
+if [ -a ".git/shallow" ]; then
+    git fetch --unshallow
+fi
+
+INPUT="\$1"
+
+case "\${INPUT}" in
+    "build")
+        if hasproj; then
+            julia --color=yes -e "
+                if VERSION < v\"0.7.0-DEV.5183\"
+                    Pkg.clone(pwd())
+                    Pkg.build(\"${JLPKG}\")
+                else
+                    using Pkg
+                    if VERSION >= v\"1.1.0\"
+                        Pkg.build(verbose=true)
+                    else
+                        Pkg.build()
+                    end
+                end
+            "
+        else
+            julia --color=yes -e "
+                VERSION >= v\"0.7.0-DEV.5183\" && using Pkg
+                Pkg.clone(pwd()) # NOTE: emits a deprecation warning
+                if VERSION >= v\"1.1.0\"
+                    Pkg.build(\"${JLPKG}\", verbose=true)
+                else
+                    Pkg.build(\"${JLPKG}\")
+                end
+            "
+        fi
+        ;;
+
+    "test")
+        if hasproj; then
+            julia --check-bounds=yes --color=yes -e "
+                if VERSION < v\"0.7.0-DEV.5183\"
+                    Pkg.test(\"${JLPKG}\", coverage=true)
+                else
+                    using Pkg
+                    Pkg.test(coverage=true)
+                end
+            "
+        else
+            julia --check-bounds=yes --color=yes -e "
+                VERSION >= v\"0.7.0-DEV.5183\" && using Pkg
+                Pkg.test(\"${JLPKG}\", coverage=true)
+            "
+        fi
+        ;;
+
+    "coverage")
+        shift
+        CODECOV=""
+        COVERALLS=""
+        while :; do
+            case "\$1" in
+                "codecov")
+                    CODECOV="Codecov.submit(p)"
+                    ;;
+                "coveralls")
+                    COVERALLS="Coveralls.submit(p)"
+                    ;;
+                *)
+                    break
+                    ;;
+            esac
+            shift
+        done
+        if hasproj; then
+            julia --color=yes -e "
+                if VERSION < v\"0.7.0-DEV.5183\"
+                    cd(Pkg.dir(\"${JLPKG}\"))
+                else
+                    using Pkg
+                end
+                Pkg.add(\"Coverage\")
+                using Coverage
+                p = process_folder()
+                \${CODECOV}
+                \${COVERALLS}
+            " || true
+        else
+            julia --color=yes -e "
+                VERSION >= v\"0.7.0-DEV.5183\" && using Pkg
+                cd(Pkg.dir(\"${JLPKG}\")) # NOTE: emits a deprecation warning
+                Pkg.add(\"Coverage\")
+                using Coverage
+                p = process_folder()
+                \${CODECOV}
+                \${COVERALLS}
+            " || true
+        fi
+        ;;
+
+    *)
+        echo "Usage: cirrusjl <build|test|coverage>" >&2
+        exit 1
+        ;;
+esac
+EOF
+
+chmod +x /usr/local/bin/cirrusjl
