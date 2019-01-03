@@ -1,7 +1,6 @@
 #!/bin/sh
 
 set -e
-set -x
 
 stop() {
     echo "$@" >&2
@@ -117,7 +116,7 @@ hasproj() {
 export JULIA_PROJECT="@."
 
 cd "${CIRRUS_WORKING_DIR}"
-if [ -a ".git/shallow" ]; then
+if [ -e ".git/shallow" ]; then
     git fetch --unshallow
 fi
 
