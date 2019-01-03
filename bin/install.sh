@@ -45,6 +45,7 @@ if [ -z "${MAJOR}" ] || [ -z "${MINOR}" ]; then
 fi
 
 # We didn't have fully functioning binaries for FreeBSD until 0.7
+# XXX: The cirrusjl logic assumes 0.7 or greater
 if [ "${OS}" = "freebsd" ] && [ ${MAJOR} -eq 0 ] && [ ${MINOR} -le 6 ]; then
     stop "FreeBSD requires Julia 0.7 or later"
 fi
@@ -125,23 +126,18 @@ INPUT="\$1"
 case "\${INPUT}" in
     "build")
         if hasproj; then
-            julia --color=yes -e "
-                if VERSION < v\"0.7.0-DEV.5183\"
-                    Pkg.clone(pwd())
-                    Pkg.build(\"${JLPKG}\")
+            julia --color=yes --project=. -e "
+                using Pkg
+                if VERSION >= v\"1.1.0\"
+                    Pkg.build(verbose=true)
                 else
-                    using Pkg
-                    if VERSION >= v\"1.1.0\"
-                        Pkg.build(verbose=true)
-                    else
-                        Pkg.build()
-                    end
+                    Pkg.build()
                 end
             "
         else
             julia --color=yes -e "
-                VERSION >= v\"0.7.0-DEV.5183\" && using Pkg
-                Pkg.clone(pwd()) # NOTE: emits a deprecation warning
+                using Pkg
+                Pkg.add(PackageSpec(name=\"${JLPKG}\", path=pwd()))
                 if VERSION >= v\"1.1.0\"
                     Pkg.build(\"${JLPKG}\", verbose=true)
                 else
@@ -153,17 +149,13 @@ case "\${INPUT}" in
 
     "test")
         if hasproj; then
-            julia --check-bounds=yes --color=yes -e "
-                if VERSION < v\"0.7.0-DEV.5183\"
-                    Pkg.test(\"${JLPKG}\", coverage=true)
-                else
-                    using Pkg
-                    Pkg.test(coverage=true)
-                end
+            julia --check-bounds=yes --color=yes --project=. -e "
+                using Pkg
+                Pkg.test(coverage=true)
             "
         else
             julia --check-bounds=yes --color=yes -e "
-                VERSION >= v\"0.7.0-DEV.5183\" && using Pkg
+                using Pkg
                 Pkg.test(\"${JLPKG}\", coverage=true)
             "
         fi
@@ -187,30 +179,14 @@ case "\${INPUT}" in
             esac
             shift
         done
-        if hasproj; then
-            julia --color=yes -e "
-                if VERSION < v\"0.7.0-DEV.5183\"
-                    cd(Pkg.dir(\"${JLPKG}\"))
-                else
-                    using Pkg
-                end
-                Pkg.add(\"Coverage\")
-                using Coverage
-                p = process_folder()
-                \${CODECOV}
-                \${COVERALLS}
-            " || true
-        else
-            julia --color=yes -e "
-                VERSION >= v\"0.7.0-DEV.5183\" && using Pkg
-                cd(Pkg.dir(\"${JLPKG}\")) # NOTE: emits a deprecation warning
-                Pkg.add(\"Coverage\")
-                using Coverage
-                p = process_folder()
-                \${CODECOV}
-                \${COVERALLS}
-            " || true
-        fi
+        julia --color=yes -e "
+            using Pkg
+            Pkg.add(\"Coverage\")
+            using Coverage
+            p = process_folder()
+            \${CODECOV}
+            \${COVERALLS}
+        " || true
         ;;
 
     *)
