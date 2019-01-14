@@ -30,9 +30,6 @@ fi
 
 if [ -z "${JULIA_VERSION}" ]; then
     stop "JULIA_VERSION is not defined; don't know what to download"
-elif [ "${JULIA_VERSION}" = "nightly" ] && [ "${OS}" = "freebsd" ]; then
-    # TODO: Remove this once we have working FreeBSD nightlies
-    stop "Nightly binaries are not currently available for FreeBSD"
 fi
 
 MAJOR="$(echo "${JULIA_VERSION}" | cut -d'.' -f 1)"
