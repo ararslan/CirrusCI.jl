@@ -14,18 +14,19 @@ This is still in an alpha stage; there may be future changes.
 ## Usage
 
 Create a file called `.cirrus.yml` in the root directory of your Julia project and populate
-it with the following template:
+it with the following template, modifying as you see fit:
 
 ```yaml
 freebsd_instance:
-  image: freebsd-12-0-release-amd64
+  image: freebsd-12-1-release-amd64
 task:
   name: FreeBSD
   env:
     matrix:
       - JULIA_VERSION: 1.0
-      - JULIA_VERSION: 1.1
+      - JULIA_VERSION: 1.3
       - JULIA_VERSION: nightly
+  allow_failures: $JULIA_VERSION == 'nightly'
   install_script:
     - sh -c "$(fetch https://raw.githubusercontent.com/ararslan/CirrusCI.jl/master/bin/install.sh -o -)"
   build_script:
@@ -54,6 +55,8 @@ versions of Julia.
 **Currently only Julia versions 0.7 and later are supported**.
 This is unlikely to change, since supporting earlier versions makes a lot of things more
 annoying and complicated, plus there were no Julia binaries for FreeBSD prior to 0.7.
+
+Conditional build failures can be permitted using `allow_failures`.
 
 The `cirrusjl` command invokes Julia with the proper options based on whether the project
 being tested has a Project.toml file.
