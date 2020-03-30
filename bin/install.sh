@@ -32,9 +32,16 @@ if [ -z "${JULIA_VERSION}" ]; then
     stop "JULIA_VERSION is not defined; don't know what to download"
 fi
 
-MAJOR="$(echo "${JULIA_VERSION}" | cut -d'.' -f 1)"
-MINOR="$(echo "${JULIA_VERSION}" | cut -d'.' -f 2)"
-PATCH="$(echo "${JULIA_VERSION}" | cut -d'.' -f 3)"
+if [ -z "$(echo "${JULIA_VERSION}" | cut -d'.' -f 1 -s)" ]; then
+    MAJOR="${JULIA_VERSION}"
+    MINOR="4" # For JULIA_VERSION: 1 to point to latest stable release
+    PATCH=""
+    JULIA_VERSION="${MAJOR}.${MINOR}"
+else
+    MAJOR="$(echo "${JULIA_VERSION}" | cut -d'.' -f 1)"
+    MINOR="$(echo "${JULIA_VERSION}" | cut -d'.' -f 2)"
+    PATCH="$(echo "${JULIA_VERSION}" | cut -d'.' -f 3)"
+fi
 
 if [ -z "${MAJOR}" ] || [ -z "${MINOR}" ]; then
     stop "Unrecognized Julia version"
