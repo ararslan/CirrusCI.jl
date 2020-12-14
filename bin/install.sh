@@ -32,25 +32,27 @@ if [ -z "${JULIA_VERSION}" ]; then
     stop "JULIA_VERSION is not defined; don't know what to download"
 fi
 
-if [ -z "$(echo "${JULIA_VERSION}" | cut -d'.' -f 1 -s)" ]; then
-    MAJOR="${JULIA_VERSION}"
-    MINOR="4" # For JULIA_VERSION: 1 to point to latest stable release
-    PATCH=""
-    JULIA_VERSION="${MAJOR}.${MINOR}"
-else
-    MAJOR="$(echo "${JULIA_VERSION}" | cut -d'.' -f 1)"
-    MINOR="$(echo "${JULIA_VERSION}" | cut -d'.' -f 2)"
-    PATCH="$(echo "${JULIA_VERSION}" | cut -d'.' -f 3)"
-fi
+if [ "${JULIA_VERSION}" != "nightly" ]; then
+  if [ -z "$(echo "${JULIA_VERSION}" | cut -d'.' -f 1 -s)" ]; then
+      MAJOR="${JULIA_VERSION}"
+      MINOR="5" # For JULIA_VERSION: 1 to point to latest stable release
+      PATCH=""
+      JULIA_VERSION="${MAJOR}.${MINOR}"
+  else
+      MAJOR="$(echo "${JULIA_VERSION}" | cut -d'.' -f 1)"
+      MINOR="$(echo "${JULIA_VERSION}" | cut -d'.' -f 2)"
+      PATCH="$(echo "${JULIA_VERSION}" | cut -d'.' -f 3)"
+  fi
 
-if [ -z "${MAJOR}" ] || [ -z "${MINOR}" ]; then
-    stop "Unrecognized Julia version"
-fi
+  if [ -z "${MAJOR}" ] || [ -z "${MINOR}" ]; then
+      stop "Unrecognized Julia version"
+  fi
 
-# We didn't have fully functioning binaries for FreeBSD until 0.7
-# XXX: The cirrusjl logic assumes 0.7 or greater
-if [ "${OS}" = "freebsd" ] && [ ${MAJOR} -eq 0 ] && [ ${MINOR} -le 6 ]; then
-    stop "FreeBSD requires Julia 0.7 or later"
+  # We didn't have fully functioning binaries for FreeBSD until 0.7
+  # XXX: The cirrusjl logic assumes 0.7 or greater
+  if [ "${OS}" = "freebsd" ] && [ ${MAJOR} -eq 0 ] && [ ${MINOR} -le 6 ]; then
+      stop "FreeBSD requires Julia 0.7 or later"
+  fi
 fi
 
 ### Download Julia
@@ -92,7 +94,7 @@ if [ "${OS}" = "mac" ]; then
     hdiutil detach jlmnt
     rm -rf jlmnt julia.dmg
 elif [ "${OS}" = "winnt" ]; then
-    # TODO: I have no idea
+    stop "don't know what to do"
 else
     curl -s -L --retry 7 "${URL}" | tar -C "${HOME}/julia" -x -z --strip-components=1 -f -
 fi
