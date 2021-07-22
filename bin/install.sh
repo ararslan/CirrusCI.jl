@@ -35,7 +35,7 @@ fi
 if [ "${JULIA_VERSION}" != "nightly" ]; then
     if [ -z "$(echo "${JULIA_VERSION}" | cut -d'.' -f 1 -s)" ]; then
         MAJOR="${JULIA_VERSION}"
-        MINOR="5" # For JULIA_VERSION: 1 to point to latest stable release
+        MINOR="6" # For JULIA_VERSION: 1 to point to latest stable release
         PATCH=""
         JULIA_VERSION="${MAJOR}.${MINOR}"
     else
