@@ -5,11 +5,9 @@
 This repository contains utilities for using Julia on [Cirrus CI](https://cirrus-ci.org).
 Note that while Cirrus supports multiple systems, currently this script only supports FreeBSD
 builds.
-For the time being, users are encouraged to continue to use Travis CI for Linux and macOS
-and AppVeyor for Windows.
+For the time being, users are encouraged to continue to use
+[GitHub Actions](https://github.com/julia-actions/setup-julia) for Linux, macOS, and/or Windows builds.
 Support for those systems may be revisited here in the future.
-
-This is still in an alpha stage; there may be future changes.
 
 ## Usage
 
