@@ -1,5 +1,5 @@
 freebsd_instance:
-  image: freebsd-12-2-release-amd64
+  image: freebsd-13-0-release-amd64
 task:
   name: FreeBSD
   env:
@@ -15,4 +15,4 @@ task:
   test_script:
     - cirrusjl test
   coverage_script:
-    - cirrusjl coverage codecov coveralls
+    - cirrusjl coverage

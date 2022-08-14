@@ -32,14 +32,8 @@ task:
   test_script:
     - cirrusjl test
   coverage_script:
-    - cirrusjl coverage codecov coveralls
+    - cirrusjl coverage
 ```
-
-**NOTE**: [Coverage.jl](https://github.com/JuliaCI/Coverage.jl) does not yet support Cirrus
-as a CI environment for coverage submission.
-Once it does, the `cirrusjl coverage` step shown above will be verified to work properly.
-In the meantime, the `cirrusjl coverage` step will always report success so as not to fail
-builds that passed tests.
 
 ## Overview
 
@@ -60,7 +54,23 @@ It features three subcommands:
 
 * `build` installs the current package and runs `Pkg.build`,
 * `test` runs the package's tests with bounds checking enabled, and
-* `coverage` submits coverage to Codecov and/or Coveralls.
+* `coverage` submits coverage to Codecov.
 
-In turn, `cirrusjl coverage` takes 1 or 2 arguments, which must be `codecov` or `coveralls`
-in any order.
+### Code Coverage
+
+Previously, the `coverage` subcommand was effectively a no-op, as
+[Coverage.jl](https://github.com/JuliaCI/Coverage.jl) did not (and as of this writing
+still does not) support Cirrus CI, so the status of the coverage step was always ignored.
+Despite this, the implementation of `cirrusjl coverage` formerly permitted 1 or 2
+arguments: `codecov` or `coveralls` in any order.
+
+**This has changed**: the status is no longer ignored, and specifying `coveralls` now
+emits an error.
+On the other hand, `codecov` is now supported using Codecov's official uploader.
+Additionally, users may now simply use `cirrusjl coverage`, which is equivalent to
+`cirrusjl coverage codecov`.
+
+Contributions are welcome should anyone have an interest in using Coveralls for Julia
+code coverage on Cirrus.
+As Coveralls does not maintain a centralized uploader, support for Cirrus must first land
+in Coverage.jl.

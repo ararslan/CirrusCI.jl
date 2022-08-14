@@ -168,15 +168,11 @@ case "\${INPUT}" in
 
     "coverage")
         shift
-        CODECOV=""
-        COVERALLS=""
         while :; do
             case "\$1" in
-                "codecov")
-                    CODECOV="Codecov.submit(p)"
-                    ;;
                 "coveralls")
-                    COVERALLS="Coveralls.submit(p)"
+                    echo "Submitting coverage to Coveralls is not supported" >&2
+                    exit 1
                     ;;
                 *)
                     break
@@ -184,14 +180,37 @@ case "\${INPUT}" in
             esac
             shift
         done
-        julia --color=yes -e "
+        # Based on julia-actions/julia-processcoverage/main.jl
+        julia --color=yes -e '
             using Pkg
-            Pkg.add(\"Coverage\")
-            using Coverage
-            p = process_folder()
-            \${CODECOV}
-            \${COVERALLS}
-        " || true
+            Pkg.activate("coveragetempenv"; shared=true)
+            Pkg.add("CoverageTools")
+            using CoverageTools
+            directories = get(ENV, "INPUT_DIRECTORIES", "src")
+            dirs = filter!(!isempty, split(directories, ","))
+            for dir in dirs
+                isdir(dir) || error("directory \$dir not found!")
+            end
+            pfs = mapreduce(process_folder, vcat, dirs)
+            LCOV.writefile("lcov.info", pfs)
+        '
+        if [ ! -z "\${CODECOV_TOKEN}" ]; then
+            SET_TOKEN="-t \${CODECOV_TOKEN}"
+        else
+            SET_TOKEN=""
+        fi
+        timeout \
+            --signal SIGTERM \
+            --preserve-status \
+            --kill-after 1m \
+            5m \
+            /compat/linux/bin/strace -irTyCwf \
+                codecov \
+                    \${SET_TOKEN} \
+                    -R "${CIRRUS_WORKING_DIR}" \
+                    --file lcov.info \
+                    --source "github.com/ararslan/CirrusCI.jl" \
+                    --verbose
         ;;
 
     *)
@@ -202,3 +221,20 @@ esac
 EOF
 
 chmod +x /usr/local/bin/cirrusjl
+
+# Setup Linux emulation in order to use the Codecov uploader
+service linux onestart || true
+pkg install -y emulators/linux_base-c7 linux-c7-strace
+tee -a /etc/fstab <<EOF
+linprocfs	/compat/linux/proc	linprocfs	rw	0	0
+linsysfs	/compat/linux/sys	linsysfs	rw	0	0
+tmpfs	/compat/linux/dev/shm	tmpfs	rw,mode=1777	0	0
+EOF
+mount /compat/linux/proc
+mount /compat/linux/sys
+mount /compat/linux/dev/shm
+service linux onestart
+
+# Install the Codecov uploader (https://docs.codecov.com/docs/codecov-uploader)
+curl "https://uploader.codecov.io/latest/linux/codecov" --output "/usr/local/bin/codecov"
+chmod +x /usr/local/bin/codecov
