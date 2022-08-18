@@ -16,13 +16,13 @@ it with the following template, modifying as you see fit:
 
 ```yaml
 freebsd_instance:
-  image: freebsd-12-1-release-amd64
+  image: freebsd-13-0-release-amd64
 task:
   name: FreeBSD
   env:
     matrix:
-      - JULIA_VERSION: 1.0
-      - JULIA_VERSION: 1.3
+      - JULIA_VERSION: 1.6
+      - JULIA_VERSION: 1
       - JULIA_VERSION: nightly
   allow_failures: $JULIA_VERSION == 'nightly'
   install_script:
@@ -45,14 +45,12 @@ builds that passed tests.
 
 `freebsd_instance` tells Cirrus which FreeBSD image you'd like to use.
 You can use a `matrix` here to test on multiple FreeBSD versions, but as long as you're
-using 11.0 or later, it shouldn't change much.
+using 12.2 or later, it shouldn't change much.
 
 The version of Julia to install is specified by the environment variable `JULIA_VERSION`,
 which can be set in a `matrix` (as in the template) to run parallel builds with different
 versions of Julia.
-**Currently only Julia versions 0.7 and later are supported**.
-This is unlikely to change, since supporting earlier versions makes a lot of things more
-annoying and complicated, plus there were no Julia binaries for FreeBSD prior to 0.7.
+Note though that **only Julia versions 0.7 and later are supported**.
 
 Conditional build failures can be permitted using `allow_failures`.
 
