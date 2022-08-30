@@ -3,20 +3,32 @@
 [![Cirrus](https://api.cirrus-ci.com/github/ararslan/CirrusCI.jl.svg)](https://cirrus-ci.com/github/ararslan/CirrusCI.jl)
 
 This repository contains utilities for using Julia on [Cirrus CI](https://cirrus-ci.org).
-Note that while Cirrus supports multiple systems, currently this script only supports FreeBSD
-builds.
+Cirrus is unique in the breadth of its support for systems and architectures.
+Note that while Cirrus supports many systems, these utilities have only been validated to
+work with FreeBSD, macOS, and Linux builds with Julia binaries matching the host's native
+architecture.
+That is, neither Windows nor using 32-bit Julia on a 64-bit host are currently supported.
 For the time being, users are encouraged to continue to use
-[GitHub Actions](https://github.com/julia-actions/setup-julia) for Linux, macOS, and/or Windows builds.
-Support for those systems may be revisited here in the future.
+[GitHub Actions](https://github.com/julia-actions/setup-julia) in such cases, though
+support here is planned for the future.
 
 ## Usage
 
 Create a file called `.cirrus.yml` in the root directory of your Julia project and populate
-it with the following template, modifying as you see fit:
+it with one of the following templates, modifying as you see fit.
+
+### One System
+
+This example uses FreeBSD 13.1-RELEASE and retrieves the installer script using the
+FreeBSD-specific command `fetch`.
+When using this template for a different system, replace both the instance and the command
+used for downloading the installer.
+For Linux-based systems, `wget` is likely to be available by default, and `curl` should
+be present on macOS.
 
 ```yaml
 freebsd_instance:
-  image: freebsd-13-0-release-amd64
+  image_family: freebsd-13-1
 task:
   name: FreeBSD
   env:
@@ -32,30 +44,128 @@ task:
   test_script:
     - cirrusjl test
   coverage_script:
-    - cirrusjl coverage codecov coveralls
+    - cirrusjl coverage codecov
 ```
 
-**NOTE**: [Coverage.jl](https://github.com/JuliaCI/Coverage.jl) does not yet support Cirrus
-as a CI environment for coverage submission.
-Once it does, the `cirrusjl coverage` step shown above will be verified to work properly.
+### Multiple Systems, Same Julia Versions
+
+The desired images can be listed in a `matrix`.
+This example builds on FreeBSD and on Ubuntu Linux with a 64-bit ARM processor.
+A more complex `install_script` is required since there is no one command that can be
+assumed to be available across platforms.
+When editing this template to suit your needs, note that you may be able to simplify the
+`install_script` if you know, for example, that `curl` is available in all images you're
+using.
+
+```yaml
+task:
+  matrix:
+    - name: FreeBSD
+      freebsd_instance:
+        image_family: freebsd-13-1
+    - name: Linux ARMv8
+      arm_container:
+        image: ubuntu:latest
+  env:
+    matrix:
+      - JULIA_VERSION: 1.6
+      - JULIA_VERSION: 1
+      - JULIA_VERSION: nightly
+  allow_failures: $JULIA_VERSION == 'nightly'
+  install_script: |
+    URL="https://raw.githubusercontent.com/ararslan/CirrusCI.jl/master/bin/install.sh"
+    if command -v curl; then
+        sh -c "$(curl ${URL})"
+    elif command -v wget; then
+        sh -c "$(wget ${URL} -q -O-)"
+    elif command -v fetch; then
+        sh -c "$(fetch ${URL} -o -)"
+    fi
+  build_script:
+    - cirrusjl build
+  test_script:
+    - cirrusjl test
+  coverage_script:
+    - cirrusjl coverage codecov
+```
+
+### Multiple Systems, Different Julia Versions
+
+This example builds on FreeBSD with Julia 1.6, latest stable, and nightly; Alpine Linux
+with latest stable only; and macOS M1 with latest stable only.
+
+```yaml
+task:
+  matrix:
+    - name: FreeBSD
+      freebsd_instance:
+        image_family: freebsd-13-1
+      env:
+        matrix:
+          - JULIA_VERSION: 1.6
+          - JULIA_VERSION: 1
+          - JULIA_VERSION: nightly
+    - name: Linux musl
+      container:
+        image: alpine:3.14
+      env:
+        - JULIA_VERSION: 1
+    - name: macOS M1
+      macos_instance:
+        image: ghcr.io/cirruslabs/macos-monterey-base:latest
+      env:
+        - JULIA_VERSION: 1
+  allow_failures: $JULIA_VERSION == 'nightly'
+  install_script: |
+    URL="https://raw.githubusercontent.com/ararslan/CirrusCI.jl/master/bin/install.sh"
+    if command -v curl; then
+        sh -c "$(curl ${URL})"
+    elif command -v wget; then
+        sh -c "$(wget ${URL} -q -O-)"
+    elif command -v fetch; then
+        sh -c "$(fetch ${URL} -o -)"
+    fi
+  build_script:
+    - cirrusjl build
+  test_script:
+    - cirrusjl test
+  coverage_script:
+    - cirrusjl coverage codecov
+```
+
+### Code Coverage
+
+[Coverage.jl](https://github.com/JuliaCI/Coverage.jl) does not support Cirrus as a CI
+environment for coverage submission.
+While Codecov's official uploader supports Cirrus, it does not support FreeBSD nor has
+it yet been integrated with CirrusCI.jl for other platforms.
+Proper coverage support here is a work in progress.
 In the meantime, the `cirrusjl coverage` step will always report success so as not to fail
 builds that passed tests.
 
 ## Overview
 
-`freebsd_instance` tells Cirrus which FreeBSD image you'd like to use.
-You can use a `matrix` here to test on multiple FreeBSD versions, but as long as you're
-using 12.2 or later, it shouldn't change much.
+Refer to the Cirrus documentation for information on the available execution environments.
+CirrusCI.jl has been tested on a variety of systems not available from other CI providers,
+including FreeBSD, Linux with musl, Linux with glibc on aarch64, and macOS M-series.
+Note that certain combinations of platforms and Julia versions may be unavailable based on
+when support was added to Julia.
+For example, macOS M1 requires at least Julia 1.7 (1.8 if you want it to work) and Linux
+with musl requires at least Julia 1.6.
+In all cases, Julia 0.7 or later is required for use with CirrusCI.jl.
 
 The version of Julia to install is specified by the environment variable `JULIA_VERSION`,
-which can be set in a `matrix` (as in the template) to run parallel builds with different
+which can be set in a `matrix` (as in the templates) to run parallel builds with different
 versions of Julia.
-Note though that **only Julia versions 0.7 and later are supported**.
+To use different sets of Julia versions for different platforms, set `env` individually
+in each platform matrix entry.
 
 Conditional build failures can be permitted using `allow_failures`.
 
 The `cirrusjl` command invokes Julia with the proper options based on whether the project
 being tested has a Project.toml file.
+(This is really only useful for ancient Julia packages which have somehow managed to avoid
+switching from REQUIRE to Project.toml.)
 It features three subcommands:
 
 * `build` installs the current package and runs `Pkg.build`,

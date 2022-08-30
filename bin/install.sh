@@ -3,8 +3,12 @@
 set -e
 
 stop() {
-    echo "$@" >&2
+    echo -e "\033[0;31m[CIRRUSCI.JL]\033[0m: ${@}" >&2
     exit 1
+}
+
+info() {
+    echo -e "\033[0;34m[CIRRUSCI.JL]\033[0m: ${@}"
 }
 
 ### Sanity check the environment
@@ -13,18 +17,17 @@ if [ "${CIRRUS_CI}" != "true" ]; then
     stop "Script is not running on Cirrus CI"
 fi
 
-# TODO: Remove this check and allow other OSes
-if [ "$(uname -s)" != "FreeBSD" ]; then
-    stop "This script currently only supports FreeBSD"
-fi
-
 if [ "${CIRRUS_OS}" = "windows" ]; then
     OS="winnt"
 elif [ "${CIRRUS_OS}" = "darwin" ]; then
     OS="mac"
+elif [ "${CIRRUS_OS}" = "linux" ] && [ ! -z "$(ldd --version 2>&1 | grep -i musl)" ]; then
+    OS="musl"
 else
     OS="${CIRRUS_OS}"
 fi
+
+info "OS name: ${OS}"
 
 ### Validate the requested version
 
@@ -48,49 +51,92 @@ if [ "${JULIA_VERSION}" != "nightly" ]; then
         stop "Unrecognized Julia version"
     fi
 
-    # We didn't have fully functioning binaries for FreeBSD until 0.7
-    # XXX: The cirrusjl logic assumes 0.7 or greater
-    if [ "${OS}" = "freebsd" ] && [ ${MAJOR} -eq 0 ] && [ ${MINOR} -le 6 ]; then
-        stop "FreeBSD requires Julia 0.7 or later"
+    # NOTE: The cirrusjl logic assumes 0.7 or greater
+    if [ ${MAJOR} -eq 0 ] && [ ${MINOR} -le 6 ]; then
+        stop "CirrusCI.jl requires Julia 0.7 or later"
     fi
 fi
 
-### Download Julia
+# Determine the architecture and map it to what Julia calls it
+ARCH="$(uname -m)"
+case "${ARCH}" in
+    "amd64") ARCH="x86_64"  ;;
+    "i386")  ARCH="i686"    ;;
+    "arm64") ARCH="aarch64" ;;
+    "ppc64") ARCH="ppc64le" ;;
+esac
 
-if [ "${OS}" = "freebsd" ]; then
-    pkg install -y curl
+info "Architecture name: ${ARCH}"
+
+if [ "${ARCH}" = "x86_64" ]; then
+    SHORT_ARCH="x64"
+elif [ "${ARCH}" = "i686" ]; then
+    SHORT_ARCH="x86"
+else
+    SHORT_ARCH="${ARCH}"
 fi
 
-# TODO: Determine whether Cirrus supports images other than 64-bit
+if [ "${ARCH}" = "i686" ] || [ "${ARCH}" = "armv7l" ]; then
+    WORD_SIZE="32"
+else
+    WORD_SIZE="64"
+fi
+
 if [ "${OS}" = "mac" ]; then
-    SUFFIX="mac64.dmg"
+    if [ "${ARCH}" = "aarch64" ]; then
+        SUFFIX="macaarch64.dmg"
+    else
+        SUFFIX="mac64.dmg"
+    fi
 elif [ "${OS}" = "winnt" ]; then
-    SUFFIX="win64.exe"
+    SUFFIX="win${WORD_SIZE}.exe"
 else
     if [ "${JULIA_VERSION}" = "nightly" ]; then
-        SUFFIX="${OS}64.tar.gz"
+        if [ "${SHORT_ARCH}" != "${ARCH}" ]; then
+            SUFFIX="${OS}${WORD_SIZE}.tar.gz"
+        else
+            SUFFIX="${OS}${ARCH}.tar.gz"
+        fi
     else
-        SUFFIX="${OS}-x86_64.tar.gz"
+        SUFFIX="${OS}-${ARCH}.tar.gz"
     fi
 fi
 
 if [ "${JULIA_VERSION}" = "nightly" ]; then
-    URL="https://julialangnightlies-s3.julialang.org/bin/${OS}/x64/julia-latest-${SUFFIX}"
+    URL="https://julialangnightlies-s3.julialang.org/bin/${OS}/${SHORT_ARCH}/julia-latest-${SUFFIX}"
 else
-    URL="https://julialang-s3.julialang.org/bin/${OS}/x64/${MAJOR}.${MINOR}/julia-${JULIA_VERSION}"
+    URL="https://julialang-s3.julialang.org/bin/${OS}/${SHORT_ARCH}/${MAJOR}.${MINOR}/julia-${JULIA_VERSION}"
     if [ -z "${PATCH}" ]; then
         URL="${URL}-latest"
     fi
     URL="${URL}-${SUFFIX}"
 fi
 
+### Download Julia
+
+if [ -z "$(which curl)" ]; then
+    info "Installing curl"
+    if [ "${OS}" = "freebsd" ]; then
+        pkg install -y curl
+    elif [ "${OS}" = "musl" ]; then
+        apk add curl
+    elif [ ! -z "$(which apt)" ]; then
+        apt update
+        apt install -y curl
+    else
+        stop "Please open an issue on https://github.com/ararslan/CirrusCI.jl and tell me how to install curl on this OS"
+    fi
+fi
+
 mkdir -p "${HOME}/julia"
+
+info "Downloading Julia from ${URL}"
 
 if [ "${OS}" = "mac" ]; then
     curl -s -L --retry 7 -o julia.dmg "${URL}"
     mkdir jlmnt
     hdiutil mount -readonly -mountpoint jlmnt julia.dmg
-    cp -a jlmnt/*.app/Contents/Resources/julia "${HOME}"
+    cp -a jlmnt/*.app/Contents/Resources/julia "${HOME}/"
     hdiutil detach jlmnt
     rm -rf jlmnt julia.dmg
 elif [ "${OS}" = "winnt" ]; then
@@ -100,6 +146,18 @@ else
 fi
 
 ### Install and verify Julia
+
+if [ ! -d /usr/local/bin ]; then
+    # Some images don't have this directory by default and the default user isn't root,
+    # which means we need `sudo` to install to `/usr/local/bin`, assuming `sudo` is
+    # available. Empirically, these conditions seems only to be the case on macOS.
+    if [ $(id -u) -ne 0 ] && [ ! -z "$(command -v sudo)" ]; then
+        sudo mkdir -p /usr/local/bin
+        sudo chown -R $(id -un) /usr/local/bin
+    else
+        mkdir -p /usr/local/bin
+    fi
+fi
 
 ln -fs "${HOME}/julia/bin/julia" /usr/local/bin/julia
 
