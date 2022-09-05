@@ -1,7 +1,7 @@
-freebsd_instance:
-  image: freebsd-12-2-release-amd64
 task:
-  name: FreeBSD
+  name: Julia on FreeBSD
+  freebsd_instance:
+    image: freebsd-12-2-release-amd64
   env:
     matrix:
       - JULIA_VERSION: 1.6
@@ -16,3 +16,8 @@ task:
     - cirrusjl test
   coverage_script:
     - cirrusjl coverage codecov coveralls
+task:
+  name: Starlark setup
+  container:
+    image: gcr.io/cirrus-ci-community/cirrus-cli:latest
+  script: cirrus internal test
