@@ -3,7 +3,8 @@ load("github.com/cirrus-modules/helpers", "task", "windows_container", "freebsd_
      "macos_instance", "container", "arm_container")
 
 def _task(name, instance):
-    return task(name, instance, instructions=[cirrusjl_install()])
+    os = name.split(" ")[0]
+    return task(name, instance, instructions=[cirrusjl_install(os)])
 
 def main(ctx):
     return [_task("FreeBSD", freebsd_instance("freebsd-13-0-release-amd64")),
