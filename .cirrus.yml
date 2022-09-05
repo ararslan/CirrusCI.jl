@@ -1,21 +1,21 @@
-task:
-  name: Julia on FreeBSD
-  freebsd_instance:
-    image: freebsd-12-2-release-amd64
-  env:
-    matrix:
-      - JULIA_VERSION: 1.6
-      - JULIA_VERSION: 1
-      - JULIA_VERSION: nightly
-  allow_failures: $JULIA_VERSION == 'nightly'
-  install_script:
-    - sh bin/install.sh
-  build_script:
-    - cirrusjl build
-  test_script:
-    - cirrusjl test
-  coverage_script:
-    - cirrusjl coverage codecov coveralls
+#task:
+#  name: Julia on FreeBSD
+#  freebsd_instance:
+#    image: freebsd-12-2-release-amd64
+#  env:
+#    matrix:
+#      - JULIA_VERSION: 1.6
+#      - JULIA_VERSION: 1
+#      - JULIA_VERSION: nightly
+#  allow_failures: $JULIA_VERSION == 'nightly'
+#  install_script:
+#    - sh bin/install.sh
+#  build_script:
+#    - cirrusjl build
+#  test_script:
+#    - cirrusjl test
+#  coverage_script:
+#    - cirrusjl coverage codecov coveralls
 task:
   name: Starlark setup
   container:
