@@ -7,7 +7,7 @@ def _task(name, instance):
     return task(name, instance, instructions=[cirrusjl_install(os)])
 
 def main(ctx):
-    return [_task("FreeBSD", freebsd_instance("freebsd-13-0-release-amd64")),
+    return [_task("FreeBSD", freebsd_instance("freebsd-13-0")),
             _task("Linux AArch64", arm_container("ubuntu:latest")),
             _task("Linux musl", container("alpine:3.14")),
             _task("Windows", windows_container("cirrusci/windowsservercore")),

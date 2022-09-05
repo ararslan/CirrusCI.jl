@@ -1,19 +1,23 @@
 task:
   name: FreeBSD
   freebsd_instance:
-    image: freebsd-13-0-release-amd64
+    image_family: freebsd-13-0
   install_script:
     - sh -c "$(fetch https://raw.githubusercontent.com/ararslan/CirrusCI.jl/master/bin/install.sh -o -)"
 task:
   name: Linux AArch64
   arm_container:
     image: ubuntu:latest
+    cpu: 2
+    memory: 4096
   install_script:
     - sh -c "$(wget https://raw.githubusercontent.com/ararslan/CirrusCI.jl/master/bin/install.sh -q -O-)"
 task:
   name: Linux musl
   container:
     image: alpine:3.14
+    cpu: 2
+    memory: 4096
   install_script:
     - sh -c "$(wget https://raw.githubusercontent.com/ararslan/CirrusCI.jl/master/bin/install.sh -q -O-)"
 task:
