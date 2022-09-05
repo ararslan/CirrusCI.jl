@@ -1,0 +1,22 @@
+task:
+  name: No coverage
+  freebsd_instance:
+    image_family: freebsd-13-0
+  install_script:
+    - sh -c "$(fetch https://raw.githubusercontent.com/ararslan/CirrusCI.jl/master/bin/install.sh -o -)"
+  build_script:
+    - cirrusjl build
+  test_script:
+    - cirrusjl test
+task:
+  name: Codecov
+  freebsd_instance:
+    image_family: freebsd-13-0
+  install_script:
+    - sh -c "$(fetch https://raw.githubusercontent.com/ararslan/CirrusCI.jl/master/bin/install.sh -o -)"
+  build_script:
+    - cirrusjl build
+  test_script:
+    - cirrusjl test
+  coverage_script:
+    - cirrusjl coverage codecov
