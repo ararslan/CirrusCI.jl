@@ -257,9 +257,9 @@ case "\${INPUT}" in
             LCOV.writefile("lcov.info", pfs)
         '
         if [ ! -z "\${CODECOV}" ]; then
-            if [ "${OS}" = "freebsd" ]; then
-                # https://github.com/codecov/uploader/issues/849
-                echo "[CIRRUSCI.JL] Skipping Codecov submission on FreeBSD, sorry :("
+            if [ "${OS}" = "freebsd" ] || [ "${ARCH}" != "x86_64" ]; then
+                # https://github.com/codecov/uploader/issues/849 for FreeBSD
+                echo "[CIRRUSCI.JL] Skipping Codecov submission on this platform, sorry :("
                 exit 0
             fi
             if [ "${OS}" = "musl" ]; then
