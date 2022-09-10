@@ -231,10 +231,10 @@ case "\${INPUT}" in
         while :; do
             case "\$1" in
                 "codecov")
-                    CODECOV="Codecov.submit(p)"
+                    CODECOV="yes"
                     ;;
                 "coveralls")
-                    COVERALLS="Coveralls.submit(p)"
+                    COVERALLS="yes"
                     ;;
                 *)
                     break
@@ -242,14 +242,52 @@ case "\${INPUT}" in
             esac
             shift
         done
-        julia --color=yes -e "
+        # Based on julia-actions/julia-processcoverage/main.jl
+        julia --color=yes -e '
             using Pkg
-            Pkg.add(\"Coverage\")
-            using Coverage
-            p = process_folder()
-            \${CODECOV}
-            \${COVERALLS}
-        " || true
+            Pkg.activate("coveragetempenv"; shared=true)
+            Pkg.add("CoverageTools")
+            using CoverageTools
+            directories = get(ENV, "INPUT_DIRECTORIES", "src")
+            dirs = filter!(!isempty, split(directories, ","))
+            for dir in dirs
+                isdir(dir) || error("directory \$dir not found!")
+            end
+            pfs = mapreduce(process_folder, vcat, dirs)
+            LCOV.writefile("lcov.info", pfs)
+        '
+        if [ ! -z "\${CODECOV}" ]; then
+            if [ "${OS}" = "freebsd" ] || [ "${ARCH}" != "x86_64" ]; then
+                # See https://github.com/codecov/uploader/issues/849 for FreeBSD
+                echo "[CIRRUSCI.JL] Skipping Codecov submission on this platform, sorry :("
+            else
+                if [ "${OS}" = "musl" ]; then
+                    CODECOV_OS="alpine"
+                elif [ "${OS}" = "mac" ]; then
+                    CODECOV_OS="macos"
+                else
+                    CODECOV_OS="${OS}"
+                fi
+                CODECOV_URL="https://uploader.codecov.io/latest/\${CODECOV_OS}/codecov"
+                echo "[CIRRUSCI.JL] Downloading the Codecov uploader from \${CODECOV_URL}"
+                curl -L "\${CODECOV_URL}" -o /usr/local/bin/codecov
+                chmod +x /usr/local/bin/codecov
+                if [ ! -z "\${CODECOV_TOKEN}" ]; then
+                    SET_TOKEN="-t \${CODECOV_TOKEN}"
+                else
+                    SET_TOKEN=""
+                fi
+                codecov \
+                    \${SET_TOKEN} \
+                    -R "${CIRRUS_WORKING_DIR}" \
+                    --file lcov.info \
+                    --source "github.com/ararslan/CirrusCI.jl" \
+                    --verbose
+            fi
+        fi
+        if [ ! -z "\${COVERALLS}" ]; then
+            echo "[CIRRUSCI.JL] Coveralls is not currently supported"
+        fi
         ;;
 
     *)

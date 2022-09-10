@@ -135,13 +135,12 @@ task:
 
 ### Code Coverage
 
-[Coverage.jl](https://github.com/JuliaCI/Coverage.jl) does not support Cirrus as a CI
-environment for coverage submission.
-While Codecov's official uploader supports Cirrus, it does not support FreeBSD nor has
-it yet been integrated with CirrusCI.jl for other platforms.
-Proper coverage support here is a work in progress.
-In the meantime, the `cirrusjl coverage` step will always report success so as not to fail
-builds that passed tests.
+Collection of code coverage is supported on all platforms.
+However, submission of coverage information to [Codecov](https://codecov.io) is only
+supported on x86\_64 systems and not on FreeBSD, due to limitations in Codecov's uploader.
+On other systems, submission is skipped without affecting the build status.
+Submission of coverage information to [Coveralls](https://coveralls.io) is currently
+unsupported, though requesting it will similarly not affect the build status.
 
 ## Overview
 
@@ -170,7 +169,7 @@ It features three subcommands:
 
 * `build` installs the current package and runs `Pkg.build`,
 * `test` runs the package's tests with bounds checking enabled, and
-* `coverage` submits coverage to Codecov and/or Coveralls.
+* `coverage` collects coverage information and optionally submits it to Codecov and/or Coveralls.
 
 In turn, `cirrusjl coverage` takes 1 or 2 arguments, which must be `codecov` or `coveralls`
-in any order.
+in any order, specifying the provider(s) to which coverage information is submitted.
