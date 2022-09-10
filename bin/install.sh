@@ -258,36 +258,35 @@ case "\${INPUT}" in
         '
         if [ ! -z "\${CODECOV}" ]; then
             if [ "${OS}" = "freebsd" ] || [ "${ARCH}" != "x86_64" ]; then
-                # https://github.com/codecov/uploader/issues/849 for FreeBSD
+                # See https://github.com/codecov/uploader/issues/849 for FreeBSD
                 echo "[CIRRUSCI.JL] Skipping Codecov submission on this platform, sorry :("
-                exit 0
-            fi
-            if [ "${OS}" = "musl" ]; then
-                CODECOV_OS="alpine"
-            elif [ "${OS}" = "mac" ]; then
-                CODECOV_OS="macos"
             else
-                CODECOV_OS="${OS}"
+                if [ "${OS}" = "musl" ]; then
+                    CODECOV_OS="alpine"
+                elif [ "${OS}" = "mac" ]; then
+                    CODECOV_OS="macos"
+                else
+                    CODECOV_OS="${OS}"
+                fi
+                CODECOV_URL="https://uploader.codecov.io/latest/\${CODECOV_OS}/codecov"
+                echo "[CIRRUSCI.JL] Downloading the Codecov uploader from \${CODECOV_URL}"
+                curl -L "\${CODECOV_URL}" -o /usr/local/bin/codecov
+                chmod +x /usr/local/bin/codecov
+                if [ ! -z "\${CODECOV_TOKEN}" ]; then
+                    SET_TOKEN="-t \${CODECOV_TOKEN}"
+                else
+                    SET_TOKEN=""
+                fi
+                codecov \
+                    \${SET_TOKEN} \
+                    -R "${CIRRUS_WORKING_DIR}" \
+                    --file lcov.info \
+                    --source "github.com/ararslan/CirrusCI.jl" \
+                    --verbose
             fi
-            CODECOV_URL="https://uploader.codecov.io/latest/\${CODECOV_OS}/codecov"
-            echo "[CIRRUSCI.JL] Downloading the Codecov uploader from \${CODECOV_URL}"
-            curl -L "\${CODECOV_URL}" -o /usr/local/bin/codecov
-            chmod +x /usr/local/bin/codecov
-            if [ ! -z "\${CODECOV_TOKEN}" ]; then
-                SET_TOKEN="-t \${CODECOV_TOKEN}"
-            else
-                SET_TOKEN=""
-            fi
-            codecov \
-                \${SET_TOKEN} \
-                -R "${CIRRUS_WORKING_DIR}" \
-                --file lcov.info \
-                --source "github.com/ararslan/CirrusCI.jl" \
-                --verbose
         fi
         if [ ! -z "\${COVERALLS}" ]; then
             echo "[CIRRUSCI.JL] Coveralls is not currently supported"
-            exit 0
         fi
         ;;
 
