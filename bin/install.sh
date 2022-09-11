@@ -257,7 +257,7 @@ case "\${INPUT}" in
             LCOV.writefile("lcov.info", pfs)
         '
         if [ ! -z "\${CODECOV}" ]; then
-            if [ "${OS}" = "freebsd" ] || [ "${ARCH}" != "x86_64" ]; then
+            if [ "${OS}" = "freebsd" ]; then
                 # See https://github.com/codecov/uploader/issues/849 for FreeBSD
                 echo "[CIRRUSCI.JL] Skipping Codecov submission on this platform, sorry :("
             else
@@ -272,13 +272,19 @@ case "\${INPUT}" in
                 echo "[CIRRUSCI.JL] Downloading the Codecov uploader from \${CODECOV_URL}"
                 curl -L "\${CODECOV_URL}" -o /usr/local/bin/codecov
                 chmod +x /usr/local/bin/codecov
-                if [ ! -z "\${CODECOV_TOKEN}" ]; then
-                    SET_TOKEN="-t \${CODECOV_TOKEN}"
+                if [ "${OS}" = "mac" ] && [ "${ARCH}" = "aarch64" ]; then
+                    sudo softwareupdate --install-rosetta --agree-to-license
+                    CODECOV_EXE="arch -x86_64 codecov"
+                elif [ "${OS}" = "linux" ] && [ "${ARCH}" != "x86_64" ] && [ ! -z "\$(which apt)" ]; then
+                    apt install -y qemu-user
+                    CODECOV_EXE="qemu-x86_64 /usr/local/bin/codecov"
                 else
-                    SET_TOKEN=""
+                    CODECOV_EXE="codecov"
                 fi
-                codecov \
-                    \${SET_TOKEN} \
+                if [ ! -z "\${CODECOV_TOKEN}" ]; then
+                    CODECOV_EXE="\${CODECOV_EXE} -t \${CODECOV_TOKEN}"
+                fi
+                \${CODECOV_EXE} \
                     -R "${CIRRUS_WORKING_DIR}" \
                     --file lcov.info \
                     --source "github.com/ararslan/CirrusCI.jl" \

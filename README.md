@@ -136,9 +136,10 @@ task:
 ### Code Coverage
 
 Collection of code coverage is supported on all platforms.
-However, submission of coverage information to [Codecov](https://codecov.io) is only
-supported on x86\_64 systems and not on FreeBSD, due to limitations in Codecov's uploader.
-On other systems, submission is skipped without affecting the build status.
+However, submission of coverage information to [Codecov](https://codecov.io) is not
+supported on FreeBSD due to [limitations](https://github.com/codecov/uploader/issues/849)
+in Codecov's uploader.
+Coverage submission is skipped on FreeBSD without affecting the build status.
 Submission of coverage information to [Coveralls](https://coveralls.io) is currently
 unsupported, though requesting it will similarly not affect the build status.
 
