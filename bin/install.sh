@@ -91,7 +91,7 @@ if [ "${OS}" = "mac" ]; then
 elif [ "${OS}" = "winnt" ]; then
     SUFFIX="win${WORD_SIZE}.exe"
 else
-    if [ "${JULIA_VERSION}" = "nightly" ]; then
+    if [ "${JULIA_VERSION}" = "nightly" ] && [ "${ARCH}" != "aarch64" ]; then
         if [ "${SHORT_ARCH}" != "${ARCH}" ]; then
             SUFFIX="${OS}${WORD_SIZE}.tar.gz"
         else
