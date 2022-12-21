@@ -56,6 +56,9 @@ assumed to be available across platforms.
 When editing this template to suit your needs, note that you may be able to simplify the
 `install_script` if you know, for example, that `curl` is available in all images you're
 using.
+In the example below, we're checking for `apt` on Linux in order to handle the lack of
+a downloader on the ARM Ubuntu containers, and looking for Linux specifically because
+M1 Macs inexplicably have a program called `apt`.
 
 ```yaml
 task:
@@ -74,6 +77,10 @@ task:
   allow_failures: $JULIA_VERSION == 'nightly'
   install_script: |
     URL="https://raw.githubusercontent.com/ararslan/CirrusCI.jl/master/bin/install.sh"
+    if [ "$(uname)" = "Linux" ] && command -v apt; then
+        apt update
+        apt install -y curl
+    fi
     if command -v curl; then
         sh -c "$(curl ${URL})"
     elif command -v wget; then
@@ -118,6 +125,10 @@ task:
   allow_failures: $JULIA_VERSION == 'nightly'
   install_script: |
     URL="https://raw.githubusercontent.com/ararslan/CirrusCI.jl/master/bin/install.sh"
+    if [ "$(uname)" = "Linux" ] && command -v apt; then
+        apt update
+        apt install -y curl
+    fi
     if command -v curl; then
         sh -c "$(curl ${URL})"
     elif command -v wget; then
