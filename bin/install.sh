@@ -305,6 +305,7 @@ case "\${INPUT}" in
                         --file lcov.info \
                         --source "github.com/ararslan/CirrusCI.jl" \
                         --verbose
+                fi
             fi
         fi
         if [ ! -z "\${COVERALLS}" ]; then
