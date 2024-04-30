@@ -183,7 +183,7 @@ hasproj() {
 
 export JULIA_PROJECT="@."
 
-if [ -z "\${JULIA_PROJECT_SUBDIR}" ]; then
+if [ -z "${JULIA_PROJECT_SUBDIR}" ]; then
     cd "${CIRRUS_WORKING_DIR}"
 else
     cd "${CIRRUS_WORKING_DIR}/${JULIA_PROJECT_SUBDIR}"
