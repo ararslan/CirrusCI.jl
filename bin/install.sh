@@ -289,19 +289,11 @@ case "\${INPUT}" in
                 if [ ! -z "\${CODECOV_TOKEN}" ]; then
                     CODECOV_EXE="\${CODECOV_EXE} -t \${CODECOV_TOKEN}"
                 fi
-                if [ -z "\${JULIA_PROJECT_SUBDIR}" ]; then
-                    \${CODECOV_EXE} \
-                        -R "${CIRRUS_WORKING_DIR}" \
-                        --file lcov.info \
-                        --source "github.com/ararslan/CirrusCI.jl" \
-                        --verbose
-                else
-                    \${CODECOV_EXE} \
-                        -R "${CIRRUS_WORKING_DIR}/${JULIA_PROJECT_SUBDIR}" \
-                        --file lcov.info \
-                        --source "github.com/ararslan/CirrusCI.jl" \
-                        --verbose
-                fi
+                \${CODECOV_EXE} \
+                    -R "${CIRRUS_WORKING_DIR}/${JULIA_PROJECT_SUBDIR}" \
+                    --file lcov.info \
+                    --source "github.com/ararslan/CirrusCI.jl" \
+                    --verbose
             fi
         fi
         if [ ! -z "\${COVERALLS}" ]; then
