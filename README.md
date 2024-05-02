@@ -19,7 +19,7 @@ it with one of the following templates, modifying as you see fit.
 
 ### One System
 
-This example uses FreeBSD 13.1-RELEASE and retrieves the installer script using the
+This example uses FreeBSD 13.3-RELEASE and retrieves the installer script using the
 FreeBSD-specific command `fetch`.
 When using this template for a different system, replace both the instance and the command
 used for downloading the installer.
@@ -28,7 +28,7 @@ be present on macOS.
 
 ```yaml
 freebsd_instance:
-  image_family: freebsd-13-1
+  image_family: freebsd-13-3
 task:
   name: FreeBSD
   env:
@@ -65,7 +65,7 @@ task:
   matrix:
     - name: FreeBSD
       freebsd_instance:
-        image_family: freebsd-13-1
+        image_family: freebsd-13-3
     - name: Linux ARMv8
       arm_container:
         image: ubuntu:latest
@@ -106,7 +106,7 @@ task:
   matrix:
     - name: FreeBSD
       freebsd_instance:
-        image_family: freebsd-13-1
+        image_family: freebsd-13-3
       env:
         matrix:
           - JULIA_VERSION: 1.6
