@@ -166,11 +166,7 @@ julia --color=yes -e "using InteractiveUtils; versioninfo()"
 ### Install utilities
 
 # Throw out trailing .jl, assume the name is otherwise a valid Julia package name
-if [ -z "${JULIA_PROJECT_SUBDIR}" ]; then
-    JLPKG="$(echo "${CIRRUS_REPO_NAME}" | cut -d'.' -f 1)"
-else
-    JLPKG="$(echo "${JULIA_PROJECT_SUBDIR}" | cut -d'.' -f 1)"
-fi
+JLPKG="$(basename "${CIRRUS_REPO_NAME}/${JULIA_PROJECT_SUBDIR}" | cut -d'.' -f 1)"
 
 cat > /usr/local/bin/cirrusjl <<EOF
 #!/bin/sh
