@@ -154,6 +154,13 @@ Coverage submission is skipped on FreeBSD without affecting the build status.
 Submission of coverage information to [Coveralls](https://coveralls.io) is currently
 unsupported, though requesting it will similarly not affect the build status.
 
+### Projects in Subdirectories
+
+By default, CirrusCI.jl will look for your Julia project in the root directory of the
+repository.
+For projects that reside in a subdirectory, for example as part of a monorepo, the
+environment variable `JULIA_PROJECT_SUBDIR` can be used to specify the path to the project.
+
 ## Overview
 
 Refer to the Cirrus documentation for information on the available execution environments.
