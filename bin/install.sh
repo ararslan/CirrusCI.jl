@@ -166,7 +166,7 @@ julia --color=yes -e "using InteractiveUtils; versioninfo()"
 ### Install utilities
 
 # Throw out trailing .jl, assume the name is otherwise a valid Julia package name
-JLPKG="$(echo "${CIRRUS_REPO_NAME}" | cut -d'.' -f 1)"
+JLPKG="$(basename "${CIRRUS_REPO_NAME}/${JULIA_PROJECT_SUBDIR}" | cut -d'.' -f 1)"
 
 cat > /usr/local/bin/cirrusjl <<EOF
 #!/bin/sh
@@ -179,7 +179,8 @@ hasproj() {
 
 export JULIA_PROJECT="@."
 
-cd "${CIRRUS_WORKING_DIR}"
+cd "${CIRRUS_WORKING_DIR}/${JULIA_PROJECT_SUBDIR}"
+
 if [ -e ".git/shallow" ]; then
     git fetch --unshallow
 fi
@@ -285,7 +286,7 @@ case "\${INPUT}" in
                     CODECOV_EXE="\${CODECOV_EXE} -t \${CODECOV_TOKEN}"
                 fi
                 \${CODECOV_EXE} \
-                    -R "${CIRRUS_WORKING_DIR}" \
+                    -R "${CIRRUS_WORKING_DIR}/${JULIA_PROJECT_SUBDIR}" \
                     --file lcov.info \
                     --source "github.com/ararslan/CirrusCI.jl" \
                     --verbose
