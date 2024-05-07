@@ -272,10 +272,22 @@ case "\${INPUT}" in
                 echo "Installing Python for Codecov CLI"
                 ${INSTALLER} ${INSTALL_CMD} python3
             fi
-            python3 -m ensurepip
-            python3 -m pip install --upgrade pip
+            # Evidently some platforms need to compile C/C++ and/or Rust code??
+            if [ "${OS}" = "musl" ] && [ -z "\$(which gcc)" ]; then
+                ${INSTALLER} ${INSTALL_CMD} build-base
+            elif [ "${OS}" = "freebsd" ]; then
+                ${INSTALLER} ${INSTALL_CMD} rust
+            fi
             echo "Installing Codecov CLI"
-            python3 -m pip install codecov-cli
+            # Why, Ubuntu
+            if [ "\$(python3 -c 'import importlib.util; print(importlib.util.find_spec("ensurepip"))')" = "None" ]; then
+                ${INSTALLER} ${INSTALL_CMD} python3-pip
+                pip3 install codecov-cli
+            else
+                python3 -m ensurepip
+                python3 -m pip install --upgrade pip
+                python3 -m pip install codecov-cli
+            fi
             echo "Submitting to Codecov"
             codecovcli upload-process --file lcov.info --verbose
         fi
