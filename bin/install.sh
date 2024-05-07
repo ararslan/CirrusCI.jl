@@ -29,6 +29,26 @@ fi
 
 info "OS name: ${OS}"
 
+if [ "${OS}" = "freebsd" ]; then
+    INSTALLER="pkg"
+    INSTALL_CMD="install -y"
+elif [ "${OS}" = "musl" ]; then
+    INSTALLER="apk"
+    INSTALL_CMD="add"
+elif [ "${OS}" != "mac" ] && [ ! -z "$(which apt)" ]; then
+    INSTALLER="apt"
+    INSTALL_CMD="install -y"
+else
+    stop "Please open an issue on https://github.com/ararslan/CirrusCI.jl and tell me how to install system packages on this OS"
+fi
+
+install() {
+    info "Updating system packages"
+    ${INSTALLER} update
+    info "Installing ${@}"
+    ${INSTALLER} ${INSTALL_CMD} ${@}
+}
+
 ### Validate the requested version
 
 if [ -z "${JULIA_VERSION}" ]; then
@@ -115,17 +135,7 @@ fi
 ### Download Julia
 
 if [ -z "$(which curl)" ]; then
-    info "Installing curl"
-    if [ "${OS}" = "freebsd" ]; then
-        pkg install -y curl
-    elif [ "${OS}" = "musl" ]; then
-        apk add curl
-    elif [ ! -z "$(which apt)" ]; then
-        apt update
-        apt install -y curl
-    else
-        stop "Please open an issue on https://github.com/ararslan/CirrusCI.jl and tell me how to install curl on this OS"
-    fi
+    install curl
 fi
 
 mkdir -p "${HOME}/julia"
@@ -258,39 +268,16 @@ case "\${INPUT}" in
             LCOV.writefile("lcov.info", pfs)
         '
         if [ ! -z "\${CODECOV}" ]; then
-            if [ "${OS}" = "freebsd" ]; then
-                # See https://github.com/codecov/uploader/issues/849 for FreeBSD
-                echo "[CIRRUSCI.JL] Skipping Codecov submission on this platform, sorry :("
-            else
-                if [ "${OS}" = "musl" ]; then
-                    CODECOV_OS="alpine"
-                elif [ "${OS}" = "mac" ]; then
-                    CODECOV_OS="macos"
-                else
-                    CODECOV_OS="${OS}"
-                fi
-                CODECOV_URL="https://uploader.codecov.io/latest/\${CODECOV_OS}/codecov"
-                echo "[CIRRUSCI.JL] Downloading the Codecov uploader from \${CODECOV_URL}"
-                curl -L "\${CODECOV_URL}" -o /usr/local/bin/codecov
-                chmod +x /usr/local/bin/codecov
-                if [ "${OS}" = "mac" ] && [ "${ARCH}" = "aarch64" ]; then
-                    sudo softwareupdate --install-rosetta --agree-to-license
-                    CODECOV_EXE="arch -x86_64 codecov"
-                elif [ "${OS}" = "linux" ] && [ "${ARCH}" != "x86_64" ] && [ ! -z "\$(which apt)" ]; then
-                    apt install -y qemu-user
-                    CODECOV_EXE="qemu-x86_64 /usr/local/bin/codecov"
-                else
-                    CODECOV_EXE="codecov"
-                fi
-                if [ ! -z "\${CODECOV_TOKEN}" ]; then
-                    CODECOV_EXE="\${CODECOV_EXE} -t \${CODECOV_TOKEN}"
-                fi
-                \${CODECOV_EXE} \
-                    -R "${CIRRUS_WORKING_DIR}/${JULIA_PROJECT_SUBDIR}" \
-                    --file lcov.info \
-                    --source "github.com/ararslan/CirrusCI.jl" \
-                    --verbose
+            if [ -z "\$(which python3)" ]; then
+                echo "Installing Python for Codecov CLI"
+                ${INSTALLER} ${INSTALL_CMD} python3
             fi
+            python3 -m ensurepip
+            python3 -m pip install --upgrade pip
+            echo "Installing Codecov CLI"
+            python3 -m pip install codecov-cli
+            echo "Submitting to Codecov"
+            codecovcli upload-process --file lcov.info --verbose
         fi
         if [ ! -z "\${COVERALLS}" ]; then
             echo "[CIRRUSCI.JL] Coveralls is not currently supported"
