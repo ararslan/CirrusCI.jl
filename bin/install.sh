@@ -303,6 +303,7 @@ case "\${INPUT}" in
                 --verbose \
                 upload-process \
                     --commit-sha="\${CIRRUS_CHANGE_IN_REPO}" \
+                    --git-service github \
                     --file lcov.info
             deactivate
         fi
