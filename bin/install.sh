@@ -187,6 +187,10 @@ hasproj() {
     [ -f "Project.toml" ] || [ -f "JuliaProject.toml" ]
 }
 
+_install() {
+    ${INSTALLER} ${INSTALL_CMD} \${@}
+}
+
 export JULIA_PROJECT="@."
 
 cd "${CIRRUS_WORKING_DIR}/${JULIA_PROJECT_SUBDIR}"
@@ -269,27 +273,34 @@ case "\${INPUT}" in
         '
         if [ ! -z "\${CODECOV}" ]; then
             if [ -z "\$(which python3)" ]; then
-                echo "Installing Python for Codecov CLI"
-                ${INSTALLER} ${INSTALL_CMD} python3
+                echo "[CIRRUSCI.JL] Installing Python for Codecov CLI"
+                _install python3
             fi
             # Evidently some platforms need to compile C/C++ and/or Rust code??
-            if [ "${OS}" = "musl" ] && [ -z "\$(which gcc)" ]; then
-                ${INSTALLER} ${INSTALL_CMD} build-base
+            if [ "${OS}" = "musl" ]; then
+                _install python3-dev
+                if [ -z "\$(which gcc)" ]; then
+                    _install build-base
+                fi
             elif [ "${OS}" = "freebsd" ]; then
-                ${INSTALLER} ${INSTALL_CMD} rust
+                _install rust
             fi
-            echo "Installing Codecov CLI"
-            # Why, Ubuntu
-            if [ "\$(python3 -c 'import importlib.util; print(importlib.util.find_spec("ensurepip"))')" = "None" ]; then
-                ${INSTALLER} ${INSTALL_CMD} python3-pip
-                pip3 install codecov-cli
-            else
-                python3 -m ensurepip
-                python3 -m pip install --upgrade pip
-                python3 -m pip install codecov-cli
+            # Ubuntu makes life painful
+            if [ "${INSTALLER}" = "apt" ]; then
+                _install python3-venv
             fi
+            python3 -m venv /tmp/codecovvenv --upgrade-deps
+            . /tmp/codecovvenv/bin/activate
+            echo "[CIRRUSCI.JL] Installing Codecov CLI"
+            python3 -m pip install codecov-cli
             echo "Submitting to Codecov"
-            codecovcli upload-process --file lcov.info --verbose
+            codecovcli \
+                --auto-load-params-from=CirrusCI \
+                --verbose \
+                upload-process \
+                    --commit-sha="\${CIRRUS_CHANGE_IN_REPO}" \
+                    --file lcov.info
+            deactivate
         fi
         if [ ! -z "\${COVERALLS}" ]; then
             echo "[CIRRUSCI.JL] Coveralls is not currently supported"
