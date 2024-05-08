@@ -35,11 +35,13 @@ if [ "${OS}" = "freebsd" ]; then
 elif [ "${OS}" = "musl" ]; then
     INSTALLER="apk"
     INSTALL_CMD="add"
-elif [ "${OS}" != "mac" ] && [ ! -z "$(which apt)" ]; then
-    INSTALLER="apt"
-    INSTALL_CMD="install -y"
-else
-    stop "Please open an issue on https://github.com/ararslan/CirrusCI.jl and tell me how to install system packages on this OS"
+elif [ "${OS}" != "mac" ]
+    if [ ! -z "$(which apt)" ]; then
+        INSTALLER="apt"
+        INSTALL_CMD="install -y"
+    else
+        stop "Please open an issue on https://github.com/ararslan/CirrusCI.jl and tell me how to install system packages on this OS"
+    fi
 fi
 
 install() {
@@ -282,6 +284,8 @@ case "\${INPUT}" in
                 if [ -z "\$(which gcc)" ]; then
                     _install build-base
                 fi
+            elif [ "${OS}" = "linux" ] && [ -z "\$(which gcc)" ]; then
+                _install gcc
             elif [ "${OS}" = "freebsd" ]; then
                 _install rust
             fi
