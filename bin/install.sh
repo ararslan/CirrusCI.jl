@@ -284,7 +284,7 @@ case "\${INPUT}" in
                 if [ -z "\$(which gcc)" ]; then
                     _install build-base
                 fi
-            elif [ "${OS}" = "linux" ] && [ -z "\$(which gcc)" ]; then
+            elif [ "${OS}" = "linux" ] && [ "${ARCH}" != "x86_64" ] && [ -z "\$(which gcc)" ]; then
                 _install gcc
             elif [ "${OS}" = "freebsd" ]; then
                 _install rust
