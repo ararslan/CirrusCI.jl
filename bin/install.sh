@@ -190,6 +190,7 @@ hasproj() {
 }
 
 _install() {
+    echo "[CIRRUSCI.JL] Installing system packages: \${@}"
     ${INSTALLER} ${INSTALL_CMD} \${@}
 }
 
@@ -274,38 +275,47 @@ case "\${INPUT}" in
             LCOV.writefile("lcov.info", pfs)
         '
         if [ ! -z "\${CODECOV}" ]; then
-            if [ -z "\$(which python3)" ]; then
-                echo "[CIRRUSCI.JL] Installing Python for Codecov CLI"
-                _install python3
-            fi
-            # Evidently some platforms need to compile C/C++ and/or Rust code??
             if [ "${OS}" = "musl" ]; then
-                _install python3-dev
-                if [ -z "\$(which gcc)" ]; then
-                    _install build-base
+                CODECOV_OS="alpine"
+            elif [ "${OS}" = "mac" ]; then
+                CODECOV_OS="macos"
+            else
+                CODECOV_OS="${OS}"
+            fi
+            if [ "${ARCH}" = "aarch64" ] && [ "${OS}" != "mac" ]; then
+                CODECOV_OS="\${CODECOV_OS}-arm64"
+            fi
+            CODECOV_URL="https://cli.codecov.io/latest/\${CODECOV_OS}/codecov"
+            echo "[CIRRUSCI.JL] Downloading the Codecov CLI from \${CODECOV_URL}"
+            if curl -fsLO "\${CODECOV_URL}" --output-dir /tmp/; then
+                mv /tmp/codecov /usr/local/bin/codecov
+                chmod +x /usr/local/bin/codecov
+                CODECOV_EXE="codecov"
+            else
+                echo "[CIRRUSCI.JL] Just kidding, installing via PyPI instead"
+                command -v python3 || _install python3
+                if [ "${OS}" = "freebsd" ]; then
+                    # Something in the dependency tree requires compiling Rust code??
+                    _install rust
+                else
+                    echo "[CIRRUSCI.JL] FYI your build might fail when trying to compile the Codecov CLI"
                 fi
-            elif [ "${OS}" = "linux" ] && [ "${ARCH}" != "x86_64" ] && [ -z "\$(which gcc)" ]; then
-                _install gcc
-            elif [ "${OS}" = "freebsd" ]; then
-                _install rust
+                python3 -m venv /tmp/codecovvenv --upgrade-deps
+                . /tmp/codecovvenv/bin/activate
+                python3 -m pip install codecov-cli
+                CODECOV_EXE="codecovcli"
             fi
-            # Ubuntu makes life painful
-            if [ "${INSTALLER}" = "apt" ]; then
-                _install python3-venv
-            fi
-            python3 -m venv /tmp/codecovvenv --upgrade-deps
-            . /tmp/codecovvenv/bin/activate
-            echo "[CIRRUSCI.JL] Installing Codecov CLI"
-            python3 -m pip install codecov-cli
-            echo "Submitting to Codecov"
-            codecovcli \
+            echo "[CIRRUSCI.JL] Submitting to Codecov"
+            \${CODECOV_EXE} \
                 --auto-load-params-from=CirrusCI \
                 --verbose \
                 upload-process \
                     --commit-sha="\${CIRRUS_CHANGE_IN_REPO}" \
                     --git-service github \
                     --file lcov.info
-            deactivate
+            if [ "\${CODECOV_EXE}" = "codecovcli" ]; then
+                deactivate
+            fi
         fi
         if [ ! -z "\${COVERALLS}" ]; then
             echo "[CIRRUSCI.JL] Coveralls is not currently supported"
