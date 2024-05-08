@@ -29,6 +29,28 @@ fi
 
 info "OS name: ${OS}"
 
+if [ "${OS}" = "freebsd" ]; then
+    INSTALLER="pkg"
+    INSTALL_CMD="install -y"
+elif [ "${OS}" = "musl" ]; then
+    INSTALLER="apk"
+    INSTALL_CMD="add"
+elif [ "${OS}" != "mac" ]; then
+    if [ ! -z "$(which apt)" ]; then
+        INSTALLER="apt"
+        INSTALL_CMD="install -y"
+    else
+        stop "Please open an issue on https://github.com/ararslan/CirrusCI.jl and tell me how to install system packages on this OS"
+    fi
+fi
+
+install() {
+    info "Updating system packages"
+    ${INSTALLER} update
+    info "Installing ${@}"
+    ${INSTALLER} ${INSTALL_CMD} ${@}
+}
+
 ### Validate the requested version
 
 if [ -z "${JULIA_VERSION}" ]; then
@@ -115,17 +137,7 @@ fi
 ### Download Julia
 
 if [ -z "$(which curl)" ]; then
-    info "Installing curl"
-    if [ "${OS}" = "freebsd" ]; then
-        pkg install -y curl
-    elif [ "${OS}" = "musl" ]; then
-        apk add curl
-    elif [ ! -z "$(which apt)" ]; then
-        apt update
-        apt install -y curl
-    else
-        stop "Please open an issue on https://github.com/ararslan/CirrusCI.jl and tell me how to install curl on this OS"
-    fi
+    install curl
 fi
 
 mkdir -p "${HOME}/julia"
@@ -147,16 +159,19 @@ fi
 
 ### Install and verify Julia
 
-if [ ! -d /usr/local/bin ]; then
+DESTDIR="/usr/local/bin"
+
+if [ ! -w ${DESTDIR} ]; then
     # Some images don't have this directory by default and the default user isn't root,
     # which means we need `sudo` to install to `/usr/local/bin`, assuming `sudo` is
     # available. Empirically, these conditions seems only to be the case on macOS.
     if [ $(id -u) -ne 0 ] && [ ! -z "$(command -v sudo)" ]; then
-        sudo mkdir -p /usr/local/bin
-        sudo chown -R $(id -un) /usr/local/bin
+        SUDO="sudo"
     else
-        mkdir -p /usr/local/bin
+        SUDO=""
     fi
+    [ -d ${DESTDIR} ] || ${SUDO} mkdir -p ${DESTDIR}
+    ${SUDO} chown -R $(id -un) ${DESTDIR}
 fi
 
 ln -fs "${HOME}/julia/bin/julia" /usr/local/bin/julia
@@ -168,13 +183,18 @@ julia --color=yes -e "using InteractiveUtils; versioninfo()"
 # Throw out trailing .jl, assume the name is otherwise a valid Julia package name
 JLPKG="$(basename "${CIRRUS_REPO_NAME}/${JULIA_PROJECT_SUBDIR}" | cut -d'.' -f 1)"
 
-cat > /usr/local/bin/cirrusjl <<EOF
+cat > "${DESTDIR}/cirrusjl" <<EOF
 #!/bin/sh
 
 set -e
 
 hasproj() {
     [ -f "Project.toml" ] || [ -f "JuliaProject.toml" ]
+}
+
+_install() {
+    echo "[CIRRUSCI.JL] Installing system packages: \${@}"
+    ${INSTALLER} ${INSTALL_CMD} \${@}
 }
 
 export JULIA_PROJECT="@."
@@ -258,38 +278,46 @@ case "\${INPUT}" in
             LCOV.writefile("lcov.info", pfs)
         '
         if [ ! -z "\${CODECOV}" ]; then
-            if [ "${OS}" = "freebsd" ]; then
-                # See https://github.com/codecov/uploader/issues/849 for FreeBSD
-                echo "[CIRRUSCI.JL] Skipping Codecov submission on this platform, sorry :("
+            if [ "${OS}" = "musl" ]; then
+                CODECOV_OS="alpine"
+            elif [ "${OS}" = "mac" ]; then
+                CODECOV_OS="macos"
             else
-                if [ "${OS}" = "musl" ]; then
-                    CODECOV_OS="alpine"
-                elif [ "${OS}" = "mac" ]; then
-                    CODECOV_OS="macos"
-                else
-                    CODECOV_OS="${OS}"
-                fi
-                CODECOV_URL="https://uploader.codecov.io/latest/\${CODECOV_OS}/codecov"
-                echo "[CIRRUSCI.JL] Downloading the Codecov uploader from \${CODECOV_URL}"
-                curl -L "\${CODECOV_URL}" -o /usr/local/bin/codecov
+                CODECOV_OS="${OS}"
+            fi
+            if [ "${ARCH}" = "aarch64" ] && [ "${OS}" != "mac" ]; then
+                CODECOV_OS="\${CODECOV_OS}-arm64"
+            fi
+            CODECOV_URL="https://cli.codecov.io/latest/\${CODECOV_OS}/codecov"
+            echo "[CIRRUSCI.JL] Downloading the Codecov CLI from \${CODECOV_URL}"
+            if curl -fsLO "\${CODECOV_URL}" --output-dir /tmp/; then
+                mv /tmp/codecov /usr/local/bin/codecov
                 chmod +x /usr/local/bin/codecov
-                if [ "${OS}" = "mac" ] && [ "${ARCH}" = "aarch64" ]; then
-                    sudo softwareupdate --install-rosetta --agree-to-license
-                    CODECOV_EXE="arch -x86_64 codecov"
-                elif [ "${OS}" = "linux" ] && [ "${ARCH}" != "x86_64" ] && [ ! -z "\$(which apt)" ]; then
-                    apt install -y qemu-user
-                    CODECOV_EXE="qemu-x86_64 /usr/local/bin/codecov"
+                CODECOV_EXE="codecov"
+            else
+                echo "[CIRRUSCI.JL] Just kidding, installing via PyPI instead"
+                command -v python3 || _install python3
+                if [ "${OS}" = "freebsd" ]; then
+                    # Something in the dependency tree requires compiling Rust code??
+                    _install rust
                 else
-                    CODECOV_EXE="codecov"
+                    echo "[CIRRUSCI.JL] FYI your build might fail when trying to compile the Codecov CLI"
                 fi
-                if [ ! -z "\${CODECOV_TOKEN}" ]; then
-                    CODECOV_EXE="\${CODECOV_EXE} -t \${CODECOV_TOKEN}"
-                fi
-                \${CODECOV_EXE} \
-                    -R "${CIRRUS_WORKING_DIR}/${JULIA_PROJECT_SUBDIR}" \
-                    --file lcov.info \
-                    --source "github.com/ararslan/CirrusCI.jl" \
-                    --verbose
+                python3 -m venv /tmp/codecovvenv --upgrade-deps
+                . /tmp/codecovvenv/bin/activate
+                python3 -m pip install codecov-cli
+                CODECOV_EXE="codecovcli"
+            fi
+            echo "[CIRRUSCI.JL] Submitting to Codecov"
+            \${CODECOV_EXE} \
+                --auto-load-params-from=CirrusCI \
+                --verbose \
+                upload-process \
+                    --commit-sha="\${CIRRUS_CHANGE_IN_REPO}" \
+                    --git-service github \
+                    --file lcov.info
+            if [ "\${CODECOV_EXE}" = "codecovcli" ]; then
+                deactivate
             fi
         fi
         if [ ! -z "\${COVERALLS}" ]; then

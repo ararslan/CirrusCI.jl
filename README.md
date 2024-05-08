@@ -114,12 +114,12 @@ task:
           - JULIA_VERSION: nightly
     - name: Linux musl
       container:
-        image: alpine:3.14
+        image: alpine:latest
       env:
         - JULIA_VERSION: 1
     - name: macOS M1
       macos_instance:
-        image: ghcr.io/cirruslabs/macos-monterey-base:latest
+        image: ghcr.io/cirruslabs/macos-sonoma-base:latest
       env:
         - JULIA_VERSION: 1
   allow_failures: $JULIA_VERSION == 'nightly'
@@ -147,12 +147,16 @@ task:
 ### Code Coverage
 
 Collection of code coverage is supported on all platforms.
-However, submission of coverage information to [Codecov](https://codecov.io) is not
-supported on FreeBSD due to [limitations](https://github.com/codecov/uploader/issues/849)
-in Codecov's uploader.
-Coverage submission is skipped on FreeBSD without affecting the build status.
-Submission of coverage information to [Coveralls](https://coveralls.io) is currently
-unsupported, though requesting it will similarly not affect the build status.
+Submission of coverage information to [Codecov](https://codecov.io) is supported using
+Codecov's official command line interface, which should theoretically work on any platform.
+Submission to [Coveralls](https://coveralls.io) is not supported, but requesting it does
+not affect the build status.
+
+> [!NOTE]
+> `cirrusjl coverage codecov` can be very slow on FreeBSD because it needs to compile the
+> Codecov CLI from source in every run. I've seen this take roughly 6-7 minutes. Most
+> other platforms can use Codecov's prebuilt binaries, in which case this step takes just
+> a few seconds.
 
 ### Projects in Subdirectories
 
