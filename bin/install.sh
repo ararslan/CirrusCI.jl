@@ -35,7 +35,7 @@ if [ "${OS}" = "freebsd" ]; then
 elif [ "${OS}" = "musl" ]; then
     INSTALLER="apk"
     INSTALL_CMD="add"
-elif [ "${OS}" != "mac" ]
+elif [ "${OS}" != "mac" ]; then
     if [ ! -z "$(which apt)" ]; then
         INSTALLER="apt"
         INSTALL_CMD="install -y"
