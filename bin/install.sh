@@ -159,16 +159,19 @@ fi
 
 ### Install and verify Julia
 
-if [ ! -d /usr/local/bin ]; then
+DESTDIR="/usr/local/bin"
+
+if [ ! -w ${DESTDIR} ]; then
     # Some images don't have this directory by default and the default user isn't root,
     # which means we need `sudo` to install to `/usr/local/bin`, assuming `sudo` is
     # available. Empirically, these conditions seems only to be the case on macOS.
     if [ $(id -u) -ne 0 ] && [ ! -z "$(command -v sudo)" ]; then
-        sudo mkdir -p /usr/local/bin
-        sudo chown -R $(id -un) /usr/local/bin
+        SUDO="sudo"
     else
-        mkdir -p /usr/local/bin
+        SUDO=""
     fi
+    [ -d ${DESTDIR} ] || ${SUDO} mkdir -p ${DESTDIR}
+    ${SUDO} chown -R $(id -un) ${DESTDIR}
 fi
 
 ln -fs "${HOME}/julia/bin/julia" /usr/local/bin/julia
@@ -180,7 +183,7 @@ julia --color=yes -e "using InteractiveUtils; versioninfo()"
 # Throw out trailing .jl, assume the name is otherwise a valid Julia package name
 JLPKG="$(basename "${CIRRUS_REPO_NAME}/${JULIA_PROJECT_SUBDIR}" | cut -d'.' -f 1)"
 
-cat > /usr/local/bin/cirrusjl <<EOF
+cat > "${DESTDIR}/cirrusjl" <<EOF
 #!/bin/sh
 
 set -e
