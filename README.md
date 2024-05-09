@@ -1,6 +1,6 @@
 # CirrusCI.jl
 
-[![Cirrus](https://api.cirrus-ci.com/github/ararslan/CirrusCI.jl.svg)](https://cirrus-ci.com/github/ararslan/CirrusCI.jl)
+[![Cirrus](https://api.cirrus-ci.com/github/ararslan/CirrusCI.jl.svg?branch=master)](https://cirrus-ci.com/github/ararslan/CirrusCI.jl)
 
 This repository contains utilities for using Julia on [Cirrus CI](https://cirrus-ci.org).
 Cirrus is unique in the breadth of its support for systems and architectures.
