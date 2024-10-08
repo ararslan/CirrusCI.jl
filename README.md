@@ -33,7 +33,7 @@ task:
   name: FreeBSD
   env:
     matrix:
-      - JULIA_VERSION: 1.6
+      - JULIA_VERSION: lts
       - JULIA_VERSION: 1
       - JULIA_VERSION: nightly
   allow_failures: $JULIA_VERSION == 'nightly'
@@ -71,7 +71,7 @@ task:
         image: ubuntu:latest
   env:
     matrix:
-      - JULIA_VERSION: 1.6
+      - JULIA_VERSION: lts
       - JULIA_VERSION: 1
       - JULIA_VERSION: nightly
   allow_failures: $JULIA_VERSION == 'nightly'
@@ -109,7 +109,7 @@ task:
         image_family: freebsd-13-3
       env:
         matrix:
-          - JULIA_VERSION: 1.6
+          - JULIA_VERSION: lts
           - JULIA_VERSION: 1
           - JULIA_VERSION: nightly
     - name: Linux musl
@@ -181,6 +181,16 @@ which can be set in a `matrix` (as in the templates) to run parallel builds with
 versions of Julia.
 To use different sets of Julia versions for different platforms, set `env` individually
 in each platform matrix entry.
+The following formats are recognized for `JULIA_VERSION`:
+
+- `1`: The most recent stable 1.x release. As of this writing, this is equivalent to `1.11`.
+- `1.x` where `x` is a number: The latest patch release in the 1.x series. For example,
+  specifying `1.6` will download v1.6.7.
+- `1.x.y` where `x` and `y` are numbers, optionally followed by a prerelease specifier:
+  The exact version specified. For example, `1.6.7` downloads v1.6.7, `1.11.0-rc4` downloads
+  v1.11.0-rc4, and `6.9.420` will error.
+- `lts`: Current long-term support release. Currently equivalent to `1.10`.
+- `nightly`: Latest nightly build.
 
 Conditional build failures can be permitted using `allow_failures`.
 

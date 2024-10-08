@@ -6,6 +6,7 @@ task:
       env:
         matrix:
           - JULIA_VERSION: 1.6
+          - JULIA_VERSION: lts
           - JULIA_VERSION: 1
           - JULIA_VERSION: nightly
     - name: Linux ARMv8
