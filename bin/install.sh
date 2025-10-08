@@ -3,7 +3,7 @@
 set -e
 
 CURRENT_LTS_VERSION="1.10"
-CURRENT_STABLE_VERSION="1.11"  # what you get when you request `1`
+CURRENT_STABLE_VERSION="1.12"  # what you get when you request `1`
 
 stop() {
     echo -e "\033[0;31m[CIRRUSCI.JL]\033[0m: ${@}" >&2
