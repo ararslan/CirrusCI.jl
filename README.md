@@ -1,5 +1,13 @@
 # CirrusCI.jl
 
+> [!IMPORTANT]
+> Cirrus CI will shut down effective 2026-06-01. A recommended CI provider for less common platforms will be noted here as a replacement once identified.
+
+Thank you to Fedor Korotkov and the team at Cirrus Labs for building and running Cirrus CI,
+and for pioneering first-class support for less common operating systems and architectures.
+
+---
+
 [![Cirrus](https://api.cirrus-ci.com/github/ararslan/CirrusCI.jl.svg?branch=master)](https://cirrus-ci.com/github/ararslan/CirrusCI.jl)
 
 This repository contains utilities for using Julia on [Cirrus CI](https://cirrus-ci.org).
